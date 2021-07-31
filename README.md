@@ -1,1 +1,7 @@
-Experimental native WebView control for Godot 3.2.x
+# Experimental native WebView control for Godot 4.x
+
+## Setup
+
+```bash
+sudo apt install libwebkit2gtk-4.0-dev
+```
