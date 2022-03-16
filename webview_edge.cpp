@@ -3,8 +3,6 @@
 /*************************************************************************/
 
 #include "core/os/os.h"
-#include "scene/main/viewport.h"
-
 #include "webview.h"
 
 #include <Objbase.h>
@@ -237,17 +235,16 @@ WebViewOverlay::~WebViewOverlay() {
 void WebViewOverlay::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
-			if ((err_status == 0)) {
+			if (!Engine::get_singleton()->is_editor_hint() && (err_status == 0)) {
 				set_process_internal(
 						true); // Wait for window to init, do not init in editor.
 			}
 		} break;
 		case NOTIFICATION_INTERNAL_PROCESS: {
-			if ((data->view == nullptr) &&
+			if (!Engine::get_singleton()->is_editor_hint() && (data->view == nullptr) &&
 					(err_status == 0)) {
-				DisplayServer::WindowID window_id = get_viewport()->get_window_id();
 				HWND hwnd =
-						(HWND)DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::WINDOW_HANDLE, window_id);
+						(HWND)DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::WINDOW_HANDLE, DisplayServer::WINDOW_HANDLE);
 				if (hwnd != nullptr) {
 					float sc = DisplayServer::get_singleton()->screen_get_max_scale();
 					Rect2i rect = get_window_rect();
@@ -257,7 +254,7 @@ void WebViewOverlay::_notification(int p_what) {
 					ctrl_err_status = -1;
 				}
 			}
-			if ((data->view != nullptr) &&
+			if (!Engine::get_singleton()->is_editor_hint() && (data->view != nullptr) &&
 					(data->view->is_ready) && (ctrl_err_status == -1) &&
 					(err_status == 0)) {
 				float sc = DisplayServer::get_singleton()->screen_get_max_scale();
@@ -308,7 +305,7 @@ void WebViewOverlay::_notification(int p_what) {
 				};
 			} else if (ctrl_err_status > 0) {
 				_draw_error("Unknown control error.");
-			} else {
+			} else if (Engine::get_singleton()->is_editor_hint()) {
 				_draw_placeholder();
 			}
 		}
