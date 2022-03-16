@@ -244,7 +244,7 @@ void WebViewOverlay::_notification(int p_what) {
 			if (!Engine::get_singleton()->is_editor_hint() && (data->view == nullptr) &&
 					(err_status == 0)) {
 				HWND hwnd =
-						(HWND)DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::WINDOW_VIEW, DisplayServer::WINDOW_HANDLE);
+						(HWND)DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::WINDOW_HANDLE, DisplayServer::WINDOW_HANDLE);
 				if (hwnd != nullptr) {
 					float sc = DisplayServer::get_singleton()->screen_get_max_scale();
 					Rect2i rect = get_window_rect();
