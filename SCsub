@@ -15,6 +15,7 @@ if env["platform"] == "osx" or env["platform"] == "iphone" or env["platform"] ==
 
 elif env["platform"] == "windows":
 	env_native_webview.Append(CPPPATH=["redist"])
+	env_native_webview.Append(CPPDEFINES=["WEBVIEW_WINAPI"])
 	env_native_webview.add_source_files(env.modules_sources, "webview_edge.cpp")
 	env_native_webview.Append(LIBS=["dll/webview", "dll/WebView2Loader"])
 
