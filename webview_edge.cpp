@@ -235,13 +235,14 @@ WebViewOverlay::~WebViewOverlay() {
 void WebViewOverlay::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
-			if (err_status == 0) {
+			if (!Engine::get_singleton()->is_editor_hint() && (err_status == 0)) {
 				set_process_internal(
-						true); // Wait for window to init.
+						true); // Wait for window to init, do not init in editor.
 			}
 		} break;
 		case NOTIFICATION_INTERNAL_PROCESS: {
-			if ((data->view == nullptr) && (err_status == 0)) {
+			if (!Engine::get_singleton()->is_editor_hint() && (data->view == nullptr) &&
+					(err_status == 0)) {
 				HWND hwnd =
 						(HWND)DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::WINDOW_HANDLE, DisplayServer::WINDOW_HANDLE);
 				if (hwnd != nullptr) {
@@ -253,7 +254,7 @@ void WebViewOverlay::_notification(int p_what) {
 					ctrl_err_status = -1;
 				}
 			}
-			if ((data->view != nullptr) &&
+			if (!Engine::get_singleton()->is_editor_hint() && (data->view != nullptr) &&
 					(data->view->is_ready) && (ctrl_err_status == -1) &&
 					(err_status == 0)) {
 				float sc = DisplayServer::get_singleton()->screen_get_max_scale();
