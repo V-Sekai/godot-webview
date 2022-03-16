@@ -31,7 +31,7 @@ bool WebViewOverlay::get_no_background() const {
 	return no_background;
 }
 
-void WebViewOverlay::set_url(const String& p_url) {
+void WebViewOverlay::set_url(const String &p_url) {
 	home_url = p_url;
 }
 
@@ -39,7 +39,7 @@ String WebViewOverlay::get_url() const {
 	return home_url;
 }
 
-void WebViewOverlay::set_user_agent(const String& p_user_agent) {
+void WebViewOverlay::set_user_agent(const String &p_user_agent) {
 	user_agent = p_user_agent;
 }
 

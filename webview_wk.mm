@@ -2,12 +2,14 @@
 /*  webview_wk.mm                                                        */
 /*************************************************************************/
 
-#include "webview.h"
 #include "core/os/os.h"
+#include "webview.h"
 
-#include <WebKit/WebKit.h>
-#include <WebKit/WKNavigationDelegate.h>
+
 #include <Foundation/NSURLError.h>
+#include <WebKit/WKNavigationDelegate.h>
+#include <WebKit/WebKit.h>
+
 
 #if defined(IPHONE_ENABLED)
 #include "platform/iphone/app_delegate.h"
@@ -17,7 +19,7 @@
 
 /*************************************************************************/
 
-@interface GDWKNavigationDelegate: NSObject <WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler> {
+@interface GDWKNavigationDelegate : NSObject <WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler> {
 	WebViewOverlay *control;
 }
 - (void)setControl:(WebViewOverlay *)p_control;
@@ -63,7 +65,7 @@
 
 /*************************************************************************/
 
-@interface GDWKURLSchemeHandler: NSObject <WKURLSchemeHandler> {
+@interface GDWKURLSchemeHandler : NSObject <WKURLSchemeHandler> {
 	WebViewOverlay *control;
 }
 - (void)setControl:(WebViewOverlay *)p_control;
@@ -111,7 +113,7 @@
 
 class WebViewOverlayImplementation {
 public:
-	WKWebView* view = nullptr;
+	WKWebView *view = nullptr;
 };
 
 /*************************************************************************/
@@ -138,7 +140,7 @@ void WebViewOverlay::_notification(int p_what) {
 #elif defined(IPHONE_ENABLED)
 				UIView *main_view = AppDelegate.viewController.godotView;
 #else
-				#error Unsupported platform!
+#error Unsupported platform!
 #endif
 				if (main_view != nullptr) {
 					GDWKURLSchemeHandler *sch_handle = [[GDWKURLSchemeHandler alloc] init];
@@ -147,7 +149,7 @@ void WebViewOverlay::_notification(int p_what) {
 					GDWKNavigationDelegate *nav_handle = [[GDWKNavigationDelegate alloc] init];
 					[nav_handle setControl:this];
 
-					WKWebViewConfiguration* webViewConfig = [[WKWebViewConfiguration alloc] init];
+					WKWebViewConfiguration *webViewConfig = [[WKWebViewConfiguration alloc] init];
 					[webViewConfig setURLSchemeHandler:sch_handle forURLScheme:@"res"];
 					[webViewConfig setURLSchemeHandler:sch_handle forURLScheme:@"user"];
 					[[webViewConfig userContentController] addScriptMessageHandler:nav_handle name:@"callback"];
@@ -158,7 +160,7 @@ void WebViewOverlay::_notification(int p_what) {
 					float sc = OS::get_singleton()->get_screen_max_scale();
 					Rect2i rect = get_window_rect();
 					float wh = OS::get_singleton()->get_window_size().y / sc;
-					WKWebView* m_webView = [[WKWebView alloc] initWithFrame:CGRectMake(rect.position.x / sc, wh - rect.position.y / sc - rect.size.height / sc, rect.size.width / sc, rect.size.height / sc) configuration:webViewConfig];
+					WKWebView *m_webView = [[WKWebView alloc] initWithFrame:CGRectMake(rect.position.x / sc, wh - rect.position.y / sc - rect.size.height / sc, rect.size.width / sc, rect.size.height / sc) configuration:webViewConfig];
 
 					[m_webView setNavigationDelegate:nav_handle];
 					[m_webView setUIDelegate:nav_handle];
@@ -196,7 +198,8 @@ void WebViewOverlay::_notification(int p_what) {
 			} else if (Engine::get_singleton()->is_editor_hint()) {
 				_draw_placeholder();
 			}
-		} FALLTHROUGH;
+		}
+			FALLTHROUGH;
 		case NOTIFICATION_MOVED_IN_PARENT:
 		case NOTIFICATION_RESIZED: {
 			if (data->view != nullptr) {
@@ -212,7 +215,6 @@ void WebViewOverlay::_notification(int p_what) {
 			}
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
-			
 			if (data->view != nullptr) {
 				[data->view removeFromSuperview];
 				data->view = nullptr;
@@ -225,47 +227,45 @@ void WebViewOverlay::_notification(int p_what) {
 }
 
 void WebViewOverlay::get_snapshot(int p_width) {
-	
 	WKSnapshotConfiguration *wkSnapshotConfig = [[WKSnapshotConfiguration alloc] init];
 	wkSnapshotConfig.snapshotWidth = [NSNumber numberWithInt:p_width];
 	wkSnapshotConfig.afterScreenUpdates = NO;
 
-
 	[data->view takeSnapshotWithConfiguration:wkSnapshotConfig
 #if defined(OSX_ENABLED)
-		completionHandler:^(NSImage * _Nullable image, NSError * _Nullable error) {
+							completionHandler:^(NSImage *_Nullable image, NSError *_Nullable error) {
 #elif defined(IPHONE_ENABLED)
-		completionHandler:^(UIImage * _Nullable image, NSError * _Nullable error) {
+			completionHandler:^(UIImage *_Nullable image, NSError *_Nullable error) {
 #else
-		#error Unsupported platform!
+#error Unsupported platform!
 #endif
-		if (image != nullptr) {
-			CGImageRef imageRef = [image CGImage];
-			NSUInteger width = CGImageGetWidth(imageRef);
-			NSUInteger height = CGImageGetHeight(imageRef);
+								if (image != nullptr) {
+									CGImageRef imageRef = [image CGImage];
+									NSUInteger width = CGImageGetWidth(imageRef);
+									NSUInteger height = CGImageGetHeight(imageRef);
 
-			PoolVector<uint8_t> imgdata;
-			imgdata.resize(width * height * 4);
-			PoolVector<uint8_t>::Write wr = imgdata.write();
+									PoolVector<uint8_t> imgdata;
+									imgdata.resize(width * height * 4);
+									PoolVector<uint8_t>::Write wr = imgdata.write();
 
-			NSUInteger bytesPerPixel = 4;
-			NSUInteger bytesPerRow = bytesPerPixel * width;
-			NSUInteger bitsPerComponent = 8;
-			CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-			CGContextRef context = CGBitmapContextCreate(wr.ptr(), width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
-			CGColorSpaceRelease(colorSpace);
+									NSUInteger bytesPerPixel = 4;
+									NSUInteger bytesPerRow = bytesPerPixel * width;
+									NSUInteger bitsPerComponent = 8;
+									CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+									CGContextRef context = CGBitmapContextCreate(wr.ptr(), width, height, bitsPerComponent, bytesPerRow, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+									CGColorSpaceRelease(colorSpace);
 
-			CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
-			CGContextRelease(context);
+									CGContextDrawImage(context, CGRectMake(0, 0, width, height), imageRef);
+									CGContextRelease(context);
 
-			emit_signal("snapshot_ready", memnew(Image(width, height, false, Image::FORMAT_RGBA8, imgdata)));
-		}
-	}];
+									emit_signal("snapshot_ready", memnew(Image(width, height, false, Image::FORMAT_RGBA8, imgdata)));
+								}
+							}];
 }
 
 void WebViewOverlay::set_no_background(bool p_bg) {
 	no_background = p_bg;
-	
+
 	if (data->view != nullptr) {
 		[data->view setValue:((no_background) ? @(NO) : @(YES)) forKey:@"drawsBackground"];
 	}
@@ -275,9 +275,9 @@ bool WebViewOverlay::get_no_background() const {
 	return no_background;
 }
 
-void WebViewOverlay::set_url(const String& p_url) {
+void WebViewOverlay::set_url(const String &p_url) {
 	home_url = p_url;
-	
+
 	if (data->view != nullptr) {
 		[data->view loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:[NSString stringWithUTF8String:home_url.utf8().get_data()]]]];
 	}
@@ -291,9 +291,9 @@ String WebViewOverlay::get_url() const {
 	return home_url;
 }
 
-void WebViewOverlay::set_user_agent(const String& p_user_agent) {
+void WebViewOverlay::set_user_agent(const String &p_user_agent) {
 	user_agent = p_user_agent;
-	
+
 	if (data->view != nullptr) {
 		if (user_agent.length() > 0) {
 			[data->view setCustomUserAgent:[NSString stringWithUTF8String:user_agent.utf8().get_data()]];

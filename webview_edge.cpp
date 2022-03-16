@@ -2,28 +2,32 @@
 /*  webview_edge.cpp                                                     */
 /*************************************************************************/
 
-#include "webview.h"
 #include "core/os/os.h"
+#include "webview.h"
 
-#include <shlwapi.h>
-#include <Webview2.h>
 #include <Objbase.h>
+#include <Webview2.h>
+#include <shlwapi.h>
 #include <wrl/client.h>
 
 using namespace Microsoft::WRL;
 
-typedef HRESULT (WINAPI *CreateCoreWebView2EnvironmentWithOptionsPtr)(PCWSTR p_browser_executable_folder, PCWSTR p_user_data_folder, ICoreWebView2EnvironmentOptions* p_environment_options, ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* r_environment_created_handler);
-CreateCoreWebView2EnvironmentWithOptionsPtr webview_CreateCoreWebView2EnvironmentWithOptions = nullptr;
+typedef HRESULT(WINAPI *CreateCoreWebView2EnvironmentWithOptionsPtr)(
+		PCWSTR p_browser_executable_folder, PCWSTR p_user_data_folder,
+		ICoreWebView2EnvironmentOptions *p_environment_options,
+		ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler
+				*r_environment_created_handler);
+CreateCoreWebView2EnvironmentWithOptionsPtr
+		webview_CreateCoreWebView2EnvironmentWithOptions = nullptr;
 
-class WebViewOverlaySnapshotDelegate : public ICoreWebView2CapturePreviewCompletedHandler {
+class WebViewOverlaySnapshotDelegate
+		: public ICoreWebView2CapturePreviewCompletedHandler {
 public:
 	WebViewOverlay *control = nullptr;
 	ComPtr<IStream> img_data_stream = nullptr;
 	LONG _cRef = 1;
 
-	ULONG STDMETHODCALLTYPE AddRef() {
-		return InterlockedIncrement(&_cRef);
-	}
+	ULONG STDMETHODCALLTYPE AddRef() { return InterlockedIncrement(&_cRef); }
 
 	ULONG STDMETHODCALLTYPE Release() {
 		ULONG ulRef = InterlockedDecrement(&_cRef);
@@ -45,17 +49,16 @@ public:
 		ULONG size = stats.cbSize.QuadPart;
 		ULONG bytes_read;
 
-		PoolVector<uint8_t> imgdata;
+		Vector<uint8_t> imgdata;
 		imgdata.resize(size);
-		PoolVector<uint8_t>::Write wr = imgdata.write();
 
 		LARGE_INTEGER li;
 		li.QuadPart = 0;
 		img_data_stream->Seek(li, STREAM_SEEK_SET, nullptr);
-		img_data_stream->Read(wr.ptr(), size, &bytes_read);
+		img_data_stream->Read(imgdata.ptrw(), size, &bytes_read);
 
 		Ref<Image> image;
-		image.instance();
+		image.instantiate();
 		image->load_png_from_buffer(imgdata);
 
 		control->emit_signal("snapshot_ready", image);
@@ -63,7 +66,7 @@ public:
 		return S_OK;
 	}
 
-	WebViewOverlaySnapshotDelegate(WebViewOverlay* p_control) {
+	WebViewOverlaySnapshotDelegate(WebViewOverlay *p_control) {
 		control = p_control;
 		img_data_stream = SHCreateMemStream(nullptr, 0);
 	}
@@ -71,14 +74,14 @@ public:
 
 /*************************************************************************/
 
-class WebViewOverlayDelegate :
-	public ICoreWebView2CreateCoreWebView2ControllerCompletedHandler,
-	public ICoreWebView2NavigationStartingEventHandler,
-	public ICoreWebView2NavigationCompletedEventHandler,
-	public ICoreWebView2NewWindowRequestedEventHandler,
-	public ICoreWebView2WebMessageReceivedEventHandler,
-	public ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler,
-	public ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler {
+class WebViewOverlayDelegate
+		: public ICoreWebView2CreateCoreWebView2ControllerCompletedHandler,
+		  public ICoreWebView2NavigationStartingEventHandler,
+		  public ICoreWebView2NavigationCompletedEventHandler,
+		  public ICoreWebView2NewWindowRequestedEventHandler,
+		  public ICoreWebView2WebMessageReceivedEventHandler,
+		  public ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler,
+		  public ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler {
 public:
 	WebViewOverlay *control = nullptr;
 	HWND hwnd = nullptr;
@@ -97,9 +100,7 @@ public:
 	EventRegistrationToken new_window_token = {};
 	EventRegistrationToken message_token = {};
 
-	ULONG STDMETHODCALLTYPE AddRef() {
-		return InterlockedIncrement(&_cRef);
-	}
+	ULONG STDMETHODCALLTYPE AddRef() { return InterlockedIncrement(&_cRef); }
 
 	ULONG STDMETHODCALLTYPE Release() {
 		ULONG ulRef = InterlockedDecrement(&_cRef);
@@ -115,7 +116,9 @@ public:
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2* p_sender, ICoreWebView2NavigationStartingEventArgs* p_args) {
+	HRESULT STDMETHODCALLTYPE
+	Invoke(ICoreWebView2 *p_sender,
+			ICoreWebView2NavigationStartingEventArgs *p_args) {
 		if (control != nullptr) {
 			control->emit_signal("start_navigation");
 		}
@@ -123,7 +126,9 @@ public:
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2* p_sender, ICoreWebView2NavigationCompletedEventArgs* p_args) {
+	HRESULT STDMETHODCALLTYPE
+	Invoke(ICoreWebView2 *p_sender,
+			ICoreWebView2NavigationCompletedEventArgs *p_args) {
 		if (control != nullptr) {
 			control->emit_signal("finish_navigation");
 		}
@@ -131,7 +136,9 @@ public:
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2* p_sender, ICoreWebView2NewWindowRequestedEventArgs* p_args) {
+	HRESULT STDMETHODCALLTYPE
+	Invoke(ICoreWebView2 *p_sender,
+			ICoreWebView2NewWindowRequestedEventArgs *p_args) {
 		LPWSTR uri;
 		p_args->get_Uri(&uri);
 		ERR_FAIL_COND_V(uri == nullptr, S_OK);
@@ -141,15 +148,17 @@ public:
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE Invoke(HRESULT p_result, ICoreWebView2Environment* p_environment) {
+	HRESULT STDMETHODCALLTYPE Invoke(HRESULT p_result,
+			ICoreWebView2Environment *p_environment) {
 		env = p_environment;
 		HRESULT hr = env->CreateCoreWebView2Controller(hwnd, this);
 		ERR_FAIL_COND_V(FAILED(hr), S_OK);
-	
+
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE Invoke(HRESULT p_result, ICoreWebView2Controller* p_controller) {
+	HRESULT STDMETHODCALLTYPE Invoke(HRESULT p_result,
+			ICoreWebView2Controller *p_controller) {
 		controller = p_controller;
 		HRESULT hr = controller->get_CoreWebView2(&webview);
 		ERR_FAIL_COND_V(FAILED(hr), S_OK);
@@ -159,7 +168,9 @@ public:
 		webview->add_NewWindowRequested(this, &new_window_token);
 		webview->add_WebMessageReceived(this, &message_token);
 
-		webview->AddScriptToExecuteOnDocumentCreated(L"function webviewMessage(s){window.chrome.callback.postMessage(s);}", this);
+		webview->AddScriptToExecuteOnDocumentCreated(
+				L"function webviewMessage(s){window.chrome.callback.postMessage(s);}",
+				this);
 
 		is_ready = true;
 
@@ -171,7 +182,9 @@ public:
 		return S_OK;
 	}
 
-	HRESULT STDMETHODCALLTYPE Invoke(ICoreWebView2 *p_sender, ICoreWebView2WebMessageReceivedEventArgs *p_args) {
+	HRESULT STDMETHODCALLTYPE
+	Invoke(ICoreWebView2 *p_sender,
+			ICoreWebView2WebMessageReceivedEventArgs *p_args) {
 		LPWSTR json;
 		p_args->get_WebMessageAsJson(&json);
 
@@ -179,7 +192,7 @@ public:
 		return S_OK;
 	}
 
-	WebViewOverlayDelegate(WebViewOverlay* p_control, HWND p_hwnd) {
+	WebViewOverlayDelegate(WebViewOverlay *p_control, HWND p_hwnd) {
 		control = p_control;
 		hwnd = p_hwnd;
 
@@ -187,7 +200,8 @@ public:
 
 		CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
-		HRESULT hr = webview_CreateCoreWebView2EnvironmentWithOptions(nullptr, (LPCWSTR)cache_path.c_str(), nullptr, this);
+		HRESULT hr = webview_CreateCoreWebView2EnvironmentWithOptions(
+				nullptr, (LPCWSTR)cache_path.utf8().get_data(), nullptr, this);
 		ERR_FAIL_COND(FAILED(hr));
 	}
 
@@ -222,28 +236,35 @@ void WebViewOverlay::_notification(int p_what) {
 	switch (p_what) {
 		case NOTIFICATION_ENTER_TREE: {
 			if (!Engine::get_singleton()->is_editor_hint() && (err_status == 0)) {
-				set_process_internal(true); // Wait for window to init, do not init in editor.
+				set_process_internal(
+						true); // Wait for window to init, do not init in editor.
 			}
 		} break;
 		case NOTIFICATION_INTERNAL_PROCESS: {
-			if (!Engine::get_singleton()->is_editor_hint() && (data->view == nullptr) && (err_status == 0)) {
-				HWND hwnd = (HWND)OS::get_singleton()->get_native_handle(OS::WINDOW_HANDLE);
+			if (!Engine::get_singleton()->is_editor_hint() && (data->view == nullptr) &&
+					(err_status == 0)) {
+				HWND hwnd =
+						(HWND)DisplayServer::get_singleton()->window_get_native_handle(DisplayServer::WINDOW_VIEW, DisplayServer::WINDOW_HANDLE);
 				if (hwnd != nullptr) {
-					float sc = OS::get_singleton()->get_screen_max_scale();
+					float sc = DisplayServer::get_singleton()->screen_get_max_scale();
 					Rect2i rect = get_window_rect();
-					WebViewOverlayDelegate *webview = new WebViewOverlayDelegate(this, hwnd);
+					WebViewOverlayDelegate *webview =
+							new WebViewOverlayDelegate(this, hwnd);
 					data->view = webview;
 					ctrl_err_status = -1;
 				}
 			}
-			if (!Engine::get_singleton()->is_editor_hint() && (data->view != nullptr) && (data->view->is_ready) && (ctrl_err_status == -1) && (err_status == 0)) {
-				float sc = OS::get_singleton()->get_screen_max_scale();
+			if (!Engine::get_singleton()->is_editor_hint() && (data->view != nullptr) &&
+					(data->view->is_ready) && (ctrl_err_status == -1) &&
+					(err_status == 0)) {
+				float sc = DisplayServer::get_singleton()->screen_get_max_scale();
 				Rect2i rect = get_window_rect();
 
 				if (user_agent.length() > 0) {
-					//TODO - available in unreleased ICoreWebView2ExperimentalSettings only
+					// TODO - available in unreleased ICoreWebView2ExperimentalSettings only
 				}
-				//set (no_background) TODO, add WM_PAINT handler with SetBkMode(hdc, TRANSPARENT);
+				// set (no_background) TODO, add WM_PAINT handler with SetBkMode(hdc,
+				// TRANSPARENT);
 
 				RECT rc;
 				rc.left = rect.position.x / sc;
@@ -259,7 +280,7 @@ void WebViewOverlay::_notification(int p_what) {
 					data->view->controller->put_IsVisible(FALSE);
 				}
 
-				data->view->webview->Navigate((LPCWSTR)home_url.c_str());
+				data->view->webview->Navigate((LPCWSTR)home_url.utf8().get_data());
 				ctrl_err_status = 0;
 
 				set_process_internal(false);
@@ -275,7 +296,8 @@ void WebViewOverlay::_notification(int p_what) {
 						_draw_error("Failed to load 'WebView2Loader.dll' library.");
 					} break;
 					case 2: {
-						_draw_error("'CreateCoreWebView2EnvironmentWithOptions' function not found.");
+						_draw_error(
+								"'CreateCoreWebView2EnvironmentWithOptions' function not found.");
 					} break;
 					default: {
 						_draw_error("Unknown error.");
@@ -286,11 +308,12 @@ void WebViewOverlay::_notification(int p_what) {
 			} else if (Engine::get_singleton()->is_editor_hint()) {
 				_draw_placeholder();
 			}
-		} FALLTHROUGH;
+		}
+			[[FALLTHROUGH]];
 		case NOTIFICATION_MOVED_IN_PARENT:
 		case NOTIFICATION_RESIZED: {
 			if ((data->view != nullptr) && (data->view->is_ready)) {
-				float sc = OS::get_singleton()->get_screen_max_scale();
+				float sc = DisplayServer::get_singleton()->screen_get_max_scale();
 				Rect2i rect = get_window_rect();
 
 				RECT rc;
@@ -317,7 +340,7 @@ void WebViewOverlay::_notification(int p_what) {
 			}
 		} break;
 		default: {
-			//NOP
+			// NOP
 		} break;
 	}
 }
@@ -325,23 +348,26 @@ void WebViewOverlay::_notification(int p_what) {
 void WebViewOverlay::get_snapshot(int p_width) {
 	ERR_FAIL_COND(data->view == nullptr || !data->view->is_ready);
 
-	ComPtr<WebViewOverlaySnapshotDelegate> del = new WebViewOverlaySnapshotDelegate(this);
-	data->view->webview->CapturePreview(COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG, del->img_data_stream.Get(), del.Get());
+	ComPtr<WebViewOverlaySnapshotDelegate> del =
+			new WebViewOverlaySnapshotDelegate(this);
+	data->view->webview->CapturePreview(
+			COREWEBVIEW2_CAPTURE_PREVIEW_IMAGE_FORMAT_PNG, del->img_data_stream.Get(),
+			del.Get());
 }
 
 void WebViewOverlay::set_no_background(bool p_bg) {
 	no_background = p_bg;
-	//TODO
+	// TODO
 }
 
 bool WebViewOverlay::get_no_background() const {
 	return no_background;
 }
 
-void WebViewOverlay::set_url(const String& p_url) {
+void WebViewOverlay::set_url(const String &p_url) {
 	home_url = p_url;
 	if ((data->view != nullptr) && (data->view->is_ready)) {
-		data->view->webview->Navigate((LPCWSTR)p_url.c_str());
+		data->view->webview->Navigate((LPCWSTR)p_url.utf8().get_data());
 	}
 }
 
@@ -358,13 +384,13 @@ String WebViewOverlay::get_url() const {
 	return home_url;
 }
 
-void WebViewOverlay::set_user_agent(const String& p_user_agent) {
+void WebViewOverlay::set_user_agent(const String &p_user_agent) {
 	user_agent = p_user_agent;
-	//TODO
+	// TODO
 }
 
 String WebViewOverlay::get_user_agent() const {
-	//TODO
+	// TODO
 	return user_agent;
 }
 
@@ -386,7 +412,7 @@ void WebViewOverlay::set_zoom_level(double p_zoom) {
 
 String WebViewOverlay::get_title() const {
 	ERR_FAIL_COND_V(data->view == nullptr, "");
-	
+
 	LPWSTR title;
 	data->view->webview->get_DocumentTitle(&title);
 	ERR_FAIL_COND_V(title == nullptr, "");
@@ -398,12 +424,12 @@ String WebViewOverlay::get_title() const {
 void WebViewOverlay::execute_java_script(const String &p_script) {
 	ERR_FAIL_COND(data->view == nullptr || !data->view->is_ready);
 
-	data->view->webview->ExecuteScript((LPCWSTR)p_script.c_str(), nullptr);
+	data->view->webview->ExecuteScript((LPCWSTR)p_script.utf8().get_data(), nullptr);
 }
 
 void WebViewOverlay::load_string(const String &p_source) {
 	ERR_FAIL_COND(data->view == nullptr || !data->view->is_ready);
-	data->view->webview->NavigateToString((LPCWSTR)p_source.c_str());
+	data->view->webview->NavigateToString((LPCWSTR)p_source.utf8().get_data());
 }
 
 bool WebViewOverlay::can_go_back() const {
@@ -431,7 +457,7 @@ bool WebViewOverlay::is_loading() const {
 
 bool WebViewOverlay::is_secure_content() const {
 	ERR_FAIL_COND_V(data->view == nullptr, false);
-	//TODO not supported ???
+	// TODO not supported ???
 	return false;
 }
 
@@ -458,7 +484,9 @@ void WebViewOverlay::stop() {
 void WebViewOverlay::init() {
 	HMODULE wv2_lib = LoadLibraryW(L"WebView2Loader.dll");
 	if (wv2_lib) {
-		webview_CreateCoreWebView2EnvironmentWithOptions = (CreateCoreWebView2EnvironmentWithOptionsPtr)GetProcAddress(wv2_lib, "CreateCoreWebView2EnvironmentWithOptions");
+		webview_CreateCoreWebView2EnvironmentWithOptions =
+				(CreateCoreWebView2EnvironmentWithOptionsPtr)GetProcAddress(
+						wv2_lib, "CreateCoreWebView2EnvironmentWithOptions");
 		if (webview_CreateCoreWebView2EnvironmentWithOptions != nullptr) {
 			err_status = 0;
 		} else {

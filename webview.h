@@ -39,10 +39,10 @@ public:
 	void set_no_background(bool p_bg);
 	bool get_no_background() const;
 
-	void set_url(const String& p_url);
+	void set_url(const String &p_url);
 	String get_url() const;
 
-	void set_user_agent(const String& p_user_agent);
+	void set_user_agent(const String &p_user_agent);
 	String get_user_agent() const;
 
 	double get_zoom_level() const;
