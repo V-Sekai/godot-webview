@@ -1,5 +1,5 @@
 def can_build(env, platform):
-    return True
+    return env["platforn"] == "windows"
 
 def get_doc_classes():
     return [
