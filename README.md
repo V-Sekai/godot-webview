@@ -1,5 +1,7 @@
 # Experimental native WebView control for Godot 4.x
 
+This project has been archived.
+
 ## Setup
 
 ```bash
